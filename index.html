@@ -252,7 +252,8 @@
 </head>
 <body>
     <div class="video-container" id="videoSection">
-        <video id="boxVideo" playsinline preload="auto">
+        <!-- muted + playsinline/webkit-playsinline let the tap start unmuted, inline playback (no auto-fullscreen on mobile) -->
+        <video id="boxVideo" muted playsinline webkit-playsinline preload="auto">
             <source src="mirin-box.mp4" type="video/mp4">
         </video>
         <div class="box-preview" id="boxPreview">
@@ -307,30 +308,70 @@
         const flash = document.getElementById('flash');
         const content = document.getElementById('content');
         const videoSection = document.getElementById('videoSection');
-        let played = false;
 
-        function playReveal() {
-            if (played) return;
-            played = true;
+        let started = false;      // guards double-start (click + any synthesized event)
+        let contentShown = false; // guards showContent from firing more than once
+        let fallbackTimer = null;
+
+        function showContent() {
+            if (contentShown) return;
+            contentShown = true;
+            if (fallbackTimer) { clearTimeout(fallbackTimer); fallbackTimer = null; }
+            videoSection.style.display = 'none';
+            content.classList.add('visible');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function startReveal() {
+            if (started) return;
+            started = true;
+
             playButton.style.display = 'none';
             boxPreview.style.display = 'none';
             video.style.display = 'block';
-            video.play();
-            setTimeout(() => {
-                flash.classList.add('active');
-            }, 4000);
-            setTimeout(() => {
-                videoSection.style.display = 'none';
-                content.classList.add('visible');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }, 9500);
+
+            // The tap is a user gesture, so unmuting + playing with sound is allowed.
+            video.muted = false;
+            video.volume = 1;
+
+            const p = video.play();
+            if (p && typeof p.catch === 'function') {
+                p.catch(() => {
+                    // If unmuted playback is blocked for any reason, fall back to muted
+                    // so the animation still plays rather than freezing on a black frame.
+                    video.muted = true;
+                    video.play().catch(showContent);
+                });
+            }
+
+            // Golden flash mid-reveal
+            setTimeout(function () { flash.classList.add('active'); }, 4000);
+
+            // --- Content reveal triggers (any one of these wins; all funnel to showContent) ---
+
+            // 1) PRIMARY (most reliable on mobile): timeupdate fires ~4x/sec DURING playback and
+            //    does not depend on background timers, which mobile browsers throttle/suspend.
+            video.addEventListener('timeupdate', function () {
+                const dur = video.duration;
+                if (dur && isFinite(dur) && video.currentTime >= dur - 0.3) {
+                    showContent();
+                }
+            });
+
+            // 2) Natural end of the clip (works on desktop and well-behaved mobile players).
+            video.addEventListener('ended', showContent);
+
+            // 3) Wall-clock fallback: if the video never fires events at all, reveal anyway.
+            //    12s > the 10s clip, leaving room for buffering.
+            fallbackTimer = setTimeout(showContent, 12000);
+
+            // 4) If the video errors (missing/broken file, codec), don't strand the visitor.
+            video.addEventListener('error', function () { setTimeout(showContent, 500); });
         }
 
-        playButton.addEventListener('click', playReveal);
-        playButton.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            playReveal();
-        }, { passive: false });
+        // A click/tap is a valid user gesture on every mobile browser (Chrome, Safari,
+        // WhatsApp in-app). No touchstart+preventDefault, which can swallow the gesture.
+        playButton.addEventListener('click', startReveal);
     </script>
 </body>
 </html>
