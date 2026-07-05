@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mirin Massage Therapy</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Georgia', 'Times New Roman', serif;
+            background: #0a0a0a;
+            color: #e8ddd4;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        .video-container {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background: #0a0a0a;
+        }
+        .video-container video {
+            max-width: 100%;
+            max-height: 100vh;
+            object-fit: contain;
+            display: none;
+        }
+        .box-preview {
+            width: 260px;
+            height: 260px;
+            background: linear-gradient(145deg, #1a1a1a, #0d0d0d);
+            border: 1.5px solid rgba(201,169,110,0.4);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 0 80px rgba(201,169,110,0.06);
+        }
+        .box-preview .logo-diamond {
+            width: 70px;
+            height: 70px;
+            border: 2px solid #c9a96e;
+            transform: rotate(45deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 18px;
+            box-shadow: 0 0 30px rgba(201,169,110,0.2);
+        }
+        .box-preview .logo-diamond::before {
+            content: "🦢";
+            font-size: 28px;
+            transform: rotate(-45deg);
+        }
+        .box-preview .brand-name {
+            color: #c9a96e;
+            font-size: 1.5rem;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+        }
+        .box-preview .brand-sub {
+            color: #7a6e62;
+            font-size: 0.65rem;
+            letter-spacing: 7px;
+            text-transform: uppercase;
+            margin-top: 5px;
+        }
+        .play-button {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #c9a96e, #b89b5e);
+            color: #0a0a0a;
+            padding: 14px 40px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            cursor: pointer;
+            z-index: 100;
+            border: none;
+            font-family: inherit;
+            font-weight: 600;
+            box-shadow: 0 8px 30px rgba(201,169,110,0.3);
+            transition: all 0.3s ease;
+        }
+        .play-button:hover {
+            transform: translateX(-50%) scale(1.05);
+            box-shadow: 0 12px 40px rgba(201,169,110,0.4);
+        }
+        .flash {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: radial-gradient(ellipse at center,
+                rgba(255,215,100,0.9) 0%,
+                rgba(201,169,110,0.5) 30%,
+                transparent 60%);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 90;
+            transform: scale(0.3);
+        }
+        .flash.active {
+            animation: goldenFlash 1.2s ease-out forwards;
+        }
+        @keyframes goldenFlash {
+            0% { opacity: 0; transform: scale(0.3); }
+            25% { opacity: 1; transform: scale(1.3); }
+            60% { opacity: 0.7; transform: scale(1.1); }
+            100% { opacity: 0; transform: scale(2); }
+        }
+        .content {
+            max-width: 420px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 1s ease;
+        }
+        .content.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .logo-diamond {
+            width: 60px;
+            height: 60px;
+            border: 1.5px solid #c9a96e;
+            transform: rotate(45deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            box-shadow: 0 0 25px rgba(201,169,110,0.15);
+        }
+        .logo-diamond::before {
+            content: "🦢";
+            font-size: 24px;
+            transform: rotate(-45deg);
+            filter: grayscale(0.3) brightness(1.2);
+        }
+        h1 {
+            color: #c9a96e;
+            font-size: 1.6rem;
+            font-weight: 400;
+            letter-spacing: 4px;
+            margin-bottom: 6px;
+        }
+        .subtitle {
+            color: #6a5e52;
+            font-size: 0.75rem;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+            margin-bottom: 35px;
+        }
+        .service-card {
+            background: rgba(201,169,110,0.04);
+            border: 1px solid rgba(201,169,110,0.12);
+            border-radius: 10px;
+            padding: 18px;
+            margin-bottom: 10px;
+            text-align: left;
+        }
+        .service-card h3 {
+            color: #c9a96e;
+            font-size: 1rem;
+            font-weight: 400;
+            margin-bottom: 4px;
+        }
+        .service-card .price {
+            color: #d4c8b8;
+            font-size: 1.2rem;
+            margin-bottom: 4px;
+        }
+        .service-card p {
+            color: #7a6e62;
+            font-size: 0.8rem;
+        }
+        .info-block {
+            background: rgba(201,169,110,0.04);
+            border: 1px solid rgba(201,169,110,0.12);
+            border-radius: 10px;
+            padding: 18px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        .info-block label {
+            color: #6a5e52;
+            font-size: 0.6rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            display: block;
+            margin-bottom: 6px;
+        }
+        .info-block p {
+            color: #d4c8b8;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-size: 0.8rem;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #c9a96e, #b89b5e);
+            color: #0a0a0a;
+            font-weight: 600;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #d4b87a, #c9a96e);
+            transform: translateY(-2px);
+        }
+        .btn-ghost {
+            background: transparent;
+            color: #c9a96e;
+            border: 1px solid rgba(201,169,110,0.3);
+        }
+        .btn-ghost:hover {
+            background: rgba(201,169,110,0.08);
+        }
+        .validity {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(201,169,110,0.1);
+            color: #5a4e42;
+            font-size: 0.7rem;
+            letter-spacing: 1.5px;
+        }
+        footer {
+            text-align: center;
+            padding: 30px 20px;
+            color: #3a3229;
+            font-size: 0.7rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="video-container" id="videoSection">
+        <video id="boxVideo" playsinline preload="auto">
+            <source src="mirin-box.mp4" type="video/mp4">
+        </video>
+        <div class="box-preview" id="boxPreview">
+            <div class="logo-diamond"></div>
+            <div class="brand-name">Mirin</div>
+            <div class="brand-sub">Massage Therapist</div>
+        </div>
+        <button class="play-button" id="playButton">▶ Press Play</button>
+    </div>
+    <div class="flash" id="flash"></div>
+    <div class="content" id="content">
+        <div class="logo-diamond"></div>
+        <h1>Mirin</h1>
+        <div class="subtitle">Massage Therapist</div>
+        <div class="service-card">
+            <h3>Thai Traditional Massage</h3>
+            <div class="price">£50 — 60 min / £70 — 90 min</div>
+            <p>Authentic Thai techniques for deep relaxation</p>
+        </div>
+        <div class="service-card">
+            <h3>Deep Tissue</h3>
+            <div class="price">£55 — 60 min</div>
+            <p>Targeted pressure for chronic tension</p>
+        </div>
+        <div class="service-card">
+            <h3>Aromatherapy</h3>
+            <div class="price">£50 — 60 min</div>
+            <p>Essential oils for mind and body balance</p>
+        </div>
+        <div class="service-card">
+            <h3>Bring a Friend</h3>
+            <div class="price">£80 — 2×60 min (Mon–Thu)</div>
+            <p>Share the relaxation experience</p>
+        </div>
+        <div class="info-block">
+            <label>Location</label>
+            <p>7 Coppice Way, Chelmsley Wood<br>Birmingham B37 5TX</p>
+        </div>
+        <div class="info-block">
+            <label>Hours</label>
+            <p>Monday – Saturday<br>9:00am – 5:00pm</p>
+        </div>
+        <a href="https://wa.me/447446469908" class="btn btn-primary">Book on WhatsApp</a>
+        <a href="https://wa.me/447446469908?text=Hi%20Mirin,%20I%20want%20to%20refer%20a%20friend" class="btn btn-ghost">Refer a Friend</a>
+        <div class="validity">Offers Valid 1 — 31 July 2026</div>
+    </div>
+    <footer>© 2026 Mirin Massage Therapy</footer>
+    <script>
+        const video = document.getElementById('boxVideo');
+        const playButton = document.getElementById('playButton');
+        const boxPreview = document.getElementById('boxPreview');
+        const flash = document.getElementById('flash');
+        const content = document.getElementById('content');
+        const videoSection = document.getElementById('videoSection');
+        let played = false;
+
+        function playReveal() {
+            if (played) return;
+            played = true;
+            playButton.style.display = 'none';
+            boxPreview.style.display = 'none';
+            video.style.display = 'block';
+            video.play();
+            setTimeout(() => {
+                flash.classList.add('active');
+            }, 4000);
+            setTimeout(() => {
+                videoSection.style.display = 'none';
+                content.classList.add('visible');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }, 9500);
+        }
+
+        playButton.addEventListener('click', playReveal);
+        playButton.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            playReveal();
+        }, { passive: false });
+    </script>
+</body>
+</html>
