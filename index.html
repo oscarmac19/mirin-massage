@@ -38,6 +38,33 @@
             align-items: center;
             justify-content: center;
             box-shadow: inset 0 0 80px rgba(201,169,110,0.06);
+            /* Overlay the video so the branded box covers the black buffering frame */
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 50;
+            transition: opacity 0.4s ease;
+        }
+        /* Gentle pulse while the video buffers after Press Play */
+        .box-preview.loading {
+            animation: boxPulse 1.2s ease-in-out infinite;
+        }
+        @keyframes boxPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.55; }
+        }
+        .box-preview .loading-hint {
+            color: #7a6e62;
+            font-size: 0.6rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-top: 16px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .box-preview.loading .loading-hint {
+            opacity: 1;
         }
         .box-preview .logo-diamond {
             width: 70px;
@@ -260,6 +287,7 @@
             <div class="logo-diamond"></div>
             <div class="brand-name">Mirin</div>
             <div class="brand-sub">Massage Therapist</div>
+            <div class="loading-hint">Loading…</div>
         </div>
         <button class="play-button" id="playButton">▶ Press Play</button>
     </div>
@@ -311,6 +339,7 @@
 
         let started = false;      // guards double-start (click + any synthesized event)
         let contentShown = false; // guards showContent from firing more than once
+        let flashed = false;      // guards the golden flash from firing more than once
         let fallbackTimer = null;
 
         function showContent() {
@@ -326,8 +355,10 @@
             if (started) return;
             started = true;
 
+            // Hide the button, but KEEP the branded box on screen (pulsing) so it
+            // covers the black <video> element while the 2.9 MB file buffers.
             playButton.style.display = 'none';
-            boxPreview.style.display = 'none';
+            boxPreview.classList.add('loading');
             video.style.display = 'block';
 
             // The tap is a user gesture, so unmuting + playing with sound is allowed.
@@ -344,8 +375,27 @@
                 });
             }
 
-            // Golden flash mid-reveal
-            setTimeout(function () { flash.classList.add('active'); }, 4000);
+            // Only reveal the video once the first frame is actually ready — this is
+            // what removes the black-screen wait. 'playing' fires when playback truly
+            // starts after buffering.
+            video.addEventListener('playing', function () {
+                boxPreview.classList.remove('loading');
+                boxPreview.style.display = 'none';
+                // Re-base the safety fallback on ACTUAL playback start so buffering
+                // delay can't cut the clip short. remaining runtime + 3s cushion.
+                if (fallbackTimer) clearTimeout(fallbackTimer);
+                const dur = isFinite(video.duration) ? video.duration : 12;
+                fallbackTimer = setTimeout(showContent, (dur - video.currentTime) * 1000 + 3000);
+            });
+
+            // Golden flash tied to playback position (currentTime), not a wall-clock
+            // timer, so buffering delay can't fire it over a still-black screen.
+            video.addEventListener('timeupdate', function () {
+                if (!flashed && video.currentTime >= 4) {
+                    flashed = true;
+                    flash.classList.add('active');
+                }
+            });
 
             // --- Content reveal triggers (any one of these wins; all funnel to showContent) ---
 
@@ -361,9 +411,10 @@
             // 2) Natural end of the clip (works on desktop and well-behaved mobile players).
             video.addEventListener('ended', showContent);
 
-            // 3) Wall-clock fallback: if the video never fires events at all, reveal anyway.
-            //    12s > the 10s clip, leaving room for buffering.
-            fallbackTimer = setTimeout(showContent, 12000);
+            // 3) Wall-clock safety net: if playback NEVER starts (no 'playing' event),
+            //    reveal after 15s so the visitor is never stranded. Once 'playing'
+            //    fires, this timer is re-based to the real remaining runtime above.
+            fallbackTimer = setTimeout(showContent, 15000);
 
             // 4) If the video errors (missing/broken file, codec), don't strand the visitor.
             video.addEventListener('error', function () { setTimeout(showContent, 500); });
